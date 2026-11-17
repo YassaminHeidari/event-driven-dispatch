@@ -16,7 +16,7 @@ def main(path):
     except FileNotFoundError:
         print(f"::error::{path} not found")
         return
-    hits = [l.strip()[:300] for l in lines if PATTERNS.search(l)]
+    hits = [l.strip()[:300] for l in lines if PATTERNS.search(l) and " INFO " not in l]
     seen, picked = set(), []
     for l in hits:
         if l not in seen:

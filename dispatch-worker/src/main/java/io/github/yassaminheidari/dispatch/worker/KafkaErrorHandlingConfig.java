@@ -2,6 +2,7 @@ package io.github.yassaminheidari.dispatch.worker;
 
 import io.github.yassaminheidari.dispatch.common.Topics;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +26,10 @@ public class KafkaErrorHandlingConfig {
                                           @Value("${dispatch.worker.retry.initial-interval-ms:200}") long initial,
                                           @Value("${dispatch.worker.retry.multiplier:2.0}") double multiplier,
                                           @Value("${dispatch.worker.retry.max-interval-ms:2000}") long maxInterval) {
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template);
+        // Name the DLT explicitly (the library default suffix differs between Spring Kafka versions)
+        // and keep the original partition, so records for one job stay together.
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template,
+                (record, exception) -> new TopicPartition(Topics.DISPATCH_DLT, record.partition()));
 
         ExponentialBackOffWithMaxRetries backOff = new ExponentialBackOffWithMaxRetries(maxRetries);
         backOff.setInitialInterval(initial);

@@ -22,6 +22,12 @@ def call(method, path, body=None):
         return json.loads(r.read() or b"null")
 
 
+def fail(message):
+    # The ::error:: line shows on the GitHub Actions run page.
+    print(f"::error title=Smoke test::{message}")
+    raise SystemExit(message)
+
+
 def wait_for(check, timeout, what):
     end = time.time() + timeout
     last = None
@@ -33,7 +39,7 @@ def wait_for(check, timeout, what):
         except Exception as e:  # service still starting
             last = e
         time.sleep(2)
-    raise SystemExit(f"Timed out waiting for {what}. Last value: {last}")
+    fail(f"Timed out waiting for {what}. Last value: {last}")
 
 
 wait_for(lambda: call("GET", "/actuator/health")["status"] == "UP", 240, "API health")
@@ -53,8 +59,9 @@ for job_type, job_id in ids.items():
     job = wait_for(lambda: (j := call("GET", f"/api/jobs/{job_id}"))["status"] in ("COMPLETED", "FAILED") and j,
                    90, f"{job_type} job to finish")
     print(f"{job_type:6} -> {job['status']} attempts={job['attempts']} detail={job['detail']}")
-    assert job["status"] == status, f"{job_type}: expected {status}, got {job['status']}"
-    if attempts is not None:
-        assert job["attempts"] == attempts, f"{job_type}: expected {attempts} attempts, got {job['attempts']}"
+    if job["status"] != status:
+        fail(f"{job_type}: expected {status}, got {job['status']} ({job['detail']})")
+    if attempts is not None and job["attempts"] != attempts:
+        fail(f"{job_type}: expected {attempts} attempts, got {job['attempts']}")
 
 print("Smoke test passed")
