@@ -80,7 +80,22 @@ k6 measures the HTTP side. The script [`scripts/benchmark.sh`](scripts/benchmark
 the numbers below.
 
 <!-- BENCHMARK:START -->
-_Pending the first run of the Benchmark workflow._
+Target load: **300 jobs/s for 60s** (k6 `constant-arrival-rate`), each job sleeps 5 ms. Stack: `docker compose` on a GitHub Actions runner (4 vCPU, 15 GB RAM, GitHub Actions), 1 API instance, 2 workers × 6 consumer threads, 12 partitions. Run: 2026-11-17 19:03 UTC, commit `2bf672d`.
+
+| Metric | Result |
+|---|---|
+| HTTP throughput (POST /api/jobs) | 300.0 req/s |
+| HTTP latency p50 | 10.00 ms |
+| HTTP latency p95 | 48.76 ms |
+| **HTTP latency p99** | **85.07 ms** |
+| HTTP error rate | 0.00 % |
+| End-to-end throughput (jobs completed) | 299.9 jobs/s |
+| End-to-end latency p50 | 54.5 ms |
+| End-to-end latency p95 | 337.2 ms |
+| **End-to-end latency p99** | **564.9 ms** |
+| Jobs submitted / completed / failed | 18,001 / 18,001 / 0 |
+
+End-to-end = from the moment the API accepted the job until a worker's COMPLETED status was stored in PostgreSQL (outbox → Kafka → worker → Kafka → API).
 <!-- BENCHMARK:END -->
 
 Run it yourself: `docker compose up -d --build && ./scripts/benchmark.sh` (needs [k6](https://k6.io)).

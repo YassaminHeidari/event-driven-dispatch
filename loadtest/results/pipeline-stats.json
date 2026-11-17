@@ -1,0 +1,1 @@
+{"since":"2026-11-17T19:02:22Z","total":18001,"inFlight":0,"completed":18001,"failed":0,"byStatus":{"PENDING":0,"DISPATCHED":0,"RUNNING":0,"RETRYING":0,"COMPLETED":18001,"FAILED":0},"endToEndP50Ms":54.503,"endToEndP95Ms":337.159,"endToEndP99Ms":564.934,"completedPerSecond":299.91191243418524}
