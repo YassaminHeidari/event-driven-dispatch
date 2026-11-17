@@ -1,0 +1,42 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: dispatch-worker
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        linger.ms: 0
+    consumer:
+      auto-offset-reset: earliest
+
+dispatch:
+  worker:
+    id: ${WORKER_ID:}
+    concurrency: ${WORKER_CONCURRENCY:6}
+    retry:
+      max-retries: 3
+      initial-interval-ms: 200
+      multiplier: 2.0
+      max-interval-ms: 2000
+    idempotency:
+      lease-seconds: 30
+      done-ttl-hours: 168
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    org.apache.kafka: WARN

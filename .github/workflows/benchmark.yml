@@ -1,0 +1,68 @@
+name: Benchmark
+
+# Runs after CI passes on main, and on demand. Commits the numbers to docs/benchmark.md and README.md.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rate:
+        description: Jobs per second
+        default: "300"
+      duration:
+        description: Load test duration
+        default: 60s
+
+permissions:
+  contents: write
+
+concurrency:
+  group: benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Run the k6 load test
+        env:
+          RATE: ${{ inputs.rate || '300' }}
+          DURATION: ${{ inputs.duration || '60s' }}
+          BENCHMARK_MACHINE: ${{ runner.os }} runner
+        run: |
+          export BENCHMARK_MACHINE="$(nproc) vCPU, $(free -g | awk '/Mem:/{print $2}') GB RAM, GitHub Actions"
+          ./scripts/benchmark.sh
+          cat docs/benchmark.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show service logs
+        if: failure()
+        run: |
+          docker compose logs --no-color --tail 150 > compose.log 2>&1 || true
+          python3 scripts/ci_failure_summary.py compose.log
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/benchmark.md loadtest/results/
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "docs: update benchmark results [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
